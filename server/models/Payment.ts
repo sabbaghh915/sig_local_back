@@ -91,6 +91,14 @@ const PaymentSchema: Schema = new Schema(
 
     pricingInput: { type: Schema.Types.Mixed, default: undefined },
     breakdown: { type: QuoteSchema, default: undefined },
+
+    insuranceCompany: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "InsuranceCompany",
+  default: null,
+  index: true,
+},
+
   },
   { timestamps: true }
 );

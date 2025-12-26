@@ -4,6 +4,7 @@ import Payment from "../models/Payment";
 import SyrianVehicle from "../models/SyrianVehicle";
 import ForeignVehicle from "../models/ForeignVehicle";
 import { protect, AuthRequest } from "../middleware/auth";
+import InsuranceCompany from "../models/InsuranceCompany";
 
 const router = Router();
 
@@ -41,6 +42,20 @@ const normalizeBreakdown = (q: any) =>
       }
     : undefined;
 
+function pickCompanyWeighted(companies: any[]) {
+  const active = companies.filter((c) => c.isActive && Number(c.sharePercent) > 0);
+  const total = active.reduce((a, c) => a + Number(c.sharePercent || 0), 0);
+  if (!active.length || total <= 0) return null;
+
+  const r = Math.random() * total;
+  let acc = 0;
+  for (const c of active) {
+    acc += Number(c.sharePercent || 0);
+    if (r <= acc) return c;
+  }
+  return active[active.length - 1];
+}
+
 // @route   POST /api/payments
 // @desc    Create payment + update vehicle.pricing
 // @access  Private
@@ -54,11 +69,8 @@ router.post("/", protect, async (req: AuthRequest, res: Response) => {
       paidBy,
       payerPhone,
       notes,
-
-      // ممكن تجي باسم quote أو breakdown من الفرونت
       quote,
       breakdown,
-
       pricingInput,
     } = req.body;
 
@@ -102,6 +114,14 @@ router.post("/", protect, async (req: AuthRequest, res: Response) => {
 
     const bd = normalizeBreakdown(quote ?? breakdown);
 
+    // ✅ center + processedBy من المستخدم المسجل
+    const center = req.user?.center ?? null;          // User schema عندك فيه center
+    const processedBy = req.user?._id ?? req.user?.id; // الأفضل ObjectId
+
+    // ✅ اختر شركة تأمين حسب الحصص (اختياري)
+    const companies = await InsuranceCompany.find({ isActive: true }).select("_id sharePercent isActive");
+    const picked = pickCompanyWeighted(companies);
+
     const payment = await Payment.create({
       vehicleId,
       vehicleModel,
@@ -111,24 +131,25 @@ router.post("/", protect, async (req: AuthRequest, res: Response) => {
       paidBy,
       payerPhone,
       notes,
+
       receiptNumber: generateReceiptNumber(),
       paymentStatus: "completed",
-      processedBy: req.user.id,
+
+      processedBy,         // ✅ مهم
+      center,              // ✅ مهم (للسجلات حسب المركز + المالية)
+      insuranceCompany: picked?._id || null, // ✅ توزيع الشركات
 
       pricingInput: pricingInput ?? undefined,
       breakdown: bd ?? undefined,
     });
 
-    res.status(201).json({ success: true, data: payment });
-    // بعد protect
-    req.body.center = req.user.center; // لأن User عنده center
-    req.body.processedBy = req.user._id;
-
+    return res.status(201).json({ success: true, data: payment });
   } catch (error: any) {
     console.error("Create payment error:", error);
-    res.status(500).json({ success: false, message: error.message || "Server error" });
+    return res.status(500).json({ success: false, message: error.message || "Server error" });
   }
 });
+
 
 // @route   GET /api/payments
 router.get("/", protect, async (req: AuthRequest, res: Response) => {
