@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document, Types } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 export interface IUser extends Document {
@@ -12,7 +12,11 @@ export interface IUser extends Document {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  centerId?: Types.ObjectId | null;
   comparePassword(candidatePassword: string): Promise<boolean>;
+  lastLoginIp?: string;
+  lastLoginAt?: Date | null;
+
 }
 
 const UserSchema: Schema = new Schema(
@@ -53,10 +57,15 @@ const UserSchema: Schema = new Schema(
     phoneNumber: {
       type: String,
     },
+    center: { type: mongoose.Schema.Types.ObjectId, ref: "Center", default: null },
     isActive: {
       type: Boolean,
       default: true,
     },
+    lastLoginIp: { type: String, default: "" },
+    lastLoginAt: { type: Date, default: null },
+
+
   },
   {
     timestamps: true,

@@ -1,16 +1,42 @@
 import { Router, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
+import center from '../models/Center';
 import { protect } from '../middleware/auth';
 
 const router = Router();
 
-// Generate JWT Token
-const generateToken = (id: string) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET || 'your-secret-jwt-key-change-in-production-2024', {
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-  });
+const getClientIp = (req: any) => {
+  const xf = req.headers["x-forwarded-for"];
+  const ip =
+    (typeof xf === "string" ? xf.split(",")[0].trim() : "") ||
+    req.headers["x-real-ip"] ||
+    req.ip ||
+    req.socket?.remoteAddress ||
+    "";
+
+  // تنظيف ::ffff:192.168.1.5
+  return String(ip).replace(/^::ffff:/, "");
 };
+
+
+// Generate JWT Token
+const generateToken = (user: any) => {
+  const id = user._id.toString();
+  const centerId = user.center ? user.center.toString() : null;
+
+  return jwt.sign(
+    {
+      id,          // ✅ للـ protect الحالي
+      sub: id,     // ✅ لو عندك requireAuth يعتمد sub
+      role: user.role,
+      centerId,
+    },
+    process.env.JWT_SECRET || "your-secret-jwt-key-change-in-production-2024",
+    { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
+  );
+};
+
 
 // @route   POST /api/auth/register
 // @desc    Register a new user
@@ -64,48 +90,68 @@ router.post('/register', async (req: Request, res: Response) => {
 // @route   POST /api/auth/login
 // @desc    Login user
 // @access  Public
-router.post('/login', async (req: Request, res: Response) => {
+router.post("/login", async (req: Request, res: Response) => {
   try {
-    const { username, password } = req.body;
+    const { username, password, centerId } = req.body;
 
     if (!username || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide username and password',
+        message: "Please provide username and password",
       });
     }
 
     // Find user by username
-    const user = await User.findOne({ username }).select('+password');
+    const user = await User.findOne({ username }).select("+password");
 
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials',
+        message: "Invalid credentials",
       });
     }
 
-    // Check if user is active
     if (!user.isActive) {
       return res.status(401).json({
         success: false,
-        message: 'Account is deactivated',
+        message: "Account is deactivated",
       });
     }
 
-    // Check password
+    // ✅ Check password أولاً
     const isMatch = await user.comparePassword(password);
-
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials',
+        message: "Invalid credentials",
       });
     }
 
-    const token = generateToken(user._id.toString());
+    // ✅ تحقق المركز (إذا تم إرساله)
+    if (centerId && user.role !== "admin") {
+      const userCenter = user.center ? user.center.toString() : null;
 
-    res.status(200).json({
+      if (!userCenter || userCenter !== String(centerId)) {
+        return res.status(401).json({
+          success: false,
+          message: "هذا الحساب غير تابع لهذا المركز",
+        });
+      }
+    }
+
+    // ✅ سجل IP بعد نجاح الدخول
+    const ip = getClientIp(req);
+    await User.updateOne(
+      { _id: user._id },
+      { $set: { lastLoginIp: ip, lastLoginAt: new Date() } }
+    );
+
+    // ✅ رجّع بيانات المركز للفرونت
+    await user.populate("center", "name code ip province");
+
+    const token = generateToken(user);
+
+    return res.status(200).json({
       success: true,
       token,
       user: {
@@ -115,16 +161,18 @@ router.post('/login', async (req: Request, res: Response) => {
         fullName: user.fullName,
         role: user.role,
         employeeId: user.employeeId,
+        center: user.center, // ✅ object فيه name/ip...
       },
     });
   } catch (error: any) {
-    console.error('Login error:', error);
-    res.status(500).json({
+    console.error("Login error:", error);
+    return res.status(500).json({
       success: false,
-      message: error.message || 'Server error',
+      message: error.message || "Server error",
     });
   }
 });
+
 
 // @route   GET /api/auth/me
 // @desc    Get current logged in user

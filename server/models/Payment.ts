@@ -79,6 +79,8 @@ const PaymentSchema: Schema = new Schema(
     },
 
     receiptNumber: { type: String, required: true, unique: true },
+    center: { type: mongoose.Schema.Types.ObjectId, ref: "Center", default: null, index: true },
+
 
     paidBy: { type: String, required: true },
     payerPhone: { type: String },

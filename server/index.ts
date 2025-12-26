@@ -11,7 +11,12 @@ import paymentRoutes from "./routes/payments";
 import insuranceRouter from "./routes/insurance";
 import pricingRoutes from "./routes/pricing";
 import adminRoutes from "./routes/admin";
-import adminRoutes1 from "./routes/admin.routes.js";
+import adminRoutes1 from "./routes/admin.routes";
+import adminCentersRoutes from "./routes/admin.centers.routes";
+import metaRoutes from "./routes/meta.routes";
+import financeRoutes from "./routes/admin.finance";
+import publicCentersRoutes from "./routes//centers.public";
+
 
 
 // Connect to MongoDB
@@ -31,7 +36,13 @@ export function createServer() {
     res.json({ message: ping });
   });
 
+  const asRouter = (r: any) => (r?.default ? r.default : r);
+
+
   app.get("/api/demo", handleDemo);
+
+  console.log("centers typeof:", typeof adminCentersRoutes, "keys:", Object.keys(adminCentersRoutes || {}));
+
 
   // API Routes
   app.use("/api/auth", authRoutes);
@@ -39,8 +50,17 @@ export function createServer() {
   app.use("/api/payments", paymentRoutes);
   app.use("/api/insurance", insuranceRouter);
   app.use("/api/pricing", pricingRoutes);
-  app.use("/api/admin", adminRoutes);
-  app.use("/api/admin", adminRoutes1);
+  app.use("/api/meta", metaRoutes);
+  app.use("/api/admin/finance", financeRoutes);
+  app.use("/api", publicCentersRoutes);
+
+  
+  // ✅ Admin
+app.use("/api/admin", asRouter(adminCentersRoutes));
+app.use("/api/admin/centers", adminCentersRoutes);
+app.use("/api/admin", asRouter(adminRoutes));
+app.use("/api/admin", asRouter(adminRoutes1));
+  
 
   // Health check for MongoDB
   app.get("/api/health", (_req, res) => {
