@@ -106,5 +106,8 @@ const PaymentSchema: Schema = new Schema(
 PaymentSchema.index({ policyNumber: 1 });
 PaymentSchema.index({ paymentStatus: 1 });
 PaymentSchema.index({ createdAt: -1 });
+PaymentSchema.index({ insuranceCompany: 1, paidAt: -1 });
+PaymentSchema.index({ paymentStatus: 1 });
+PaymentSchema.index({ insuranceCompany: 1, paymentStatus: 1 });
 
 export default mongoose.model<IPayment>("Payment", PaymentSchema);

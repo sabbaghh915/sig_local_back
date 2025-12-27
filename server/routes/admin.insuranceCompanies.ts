@@ -2,6 +2,7 @@ import { Router } from "express";
 import { protect, authorize } from "../middleware/auth";
 import InsuranceCompany from "../models/InsuranceCompany";
 import Payment from "../models/Payment";
+import { getInsuranceCompanyPayments } from "../controllers/adminInsuranceCompanies.controller";
 
 const router = Router();
 console.log("✅ insurance-companies routes LOADED");
@@ -123,5 +124,7 @@ router.get("/stats", protect, authorize("admin"), async (req, res) => {
     },
   });
 });
+
+router.get("/insurance-companies/:id/payments", protect, authorize("admin"), getInsuranceCompanyPayments);
 
 export default router;
