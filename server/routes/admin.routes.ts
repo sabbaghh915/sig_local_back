@@ -1,9 +1,14 @@
 import express from "express";
-import { protect } from "../middleware/auth";
+import { authorize, protect } from "../middleware/auth";
 import { requireAuth, allowRoles } from "../middleware/auth";
 import User from "../models/User";
 import Center from "../models/Center";
 import bcrypt from "bcryptjs";
+import { getFinanceBreakdownByCenter } from "../controllers/adminFinance.controller";
+import { getFinanceDistributionByCompany } from "../controllers/adminFinance.controller";
+
+
+
 
 
 const router = express.Router();
@@ -70,7 +75,14 @@ router.delete("/users/:id", requireAuth, allowRoles("admin"), async (req, res) =
 });
 
 
+router.get(
+  "/finance/breakdown",
+  protect,
+  requireAuth,
+  getFinanceBreakdownByCenter
+);
 
+router.get("/finance/distribution", protect, requireAuth, getFinanceDistributionByCompany);
 
 
 

@@ -4,6 +4,8 @@ import User from "../models/User";
 import Center from "../models/Center";
 import { requireAuth, allowRoles } from "../middleware/auth";
 import bcrypt from "bcryptjs";
+import { getFinanceBreakdownByCenter } from "../controllers/adminFinance.controller";
+
 
 const router = Router();
 
@@ -117,6 +119,13 @@ router.get("/users", requireAuth, allowRoles("admin"), async (req, res) => {
     return res.status(500).json({ success: false, message: e?.message || "Server error" });
   }
 });
+
+router.get(
+  "/finance/breakdown",
+  protect,
+  requireAdmin,
+  getFinanceBreakdownByCenter
+);
 
 
 

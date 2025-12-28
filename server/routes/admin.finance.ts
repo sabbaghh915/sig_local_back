@@ -1,7 +1,9 @@
 import { Router } from "express";
 import { protect, authorize } from "../middleware/auth";
 import FinanceCenterTotal from "../models/FinanceCenterTotal";
-import Payment from "../models/Payment"; // عدّل المسار حسب مشروعك
+import Payment from "../models/Payment"; 
+
+
 
 const router = Router();
 
@@ -154,5 +156,9 @@ router.get("/centers/saved", protect, authorize("admin"), async (req, res) => {
 
   res.json({ success: true, from, to, data: items });
 });
+
+
+
+
 
 export default router;

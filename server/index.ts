@@ -21,6 +21,7 @@ import insuranceCompaniesRoutes from "./routes/admin.insuranceCompanies";
 
 
 
+
 // Connect to MongoDB
 connectDB();
 
