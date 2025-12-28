@@ -1,0 +1,14 @@
+
+# Windows
+desktop.ini
+**/desktop.ini
+
+# Secrets.env
+**/.env
+
+# Big archives
+*.7z
+
+# Node
+**/node_modules/
+
