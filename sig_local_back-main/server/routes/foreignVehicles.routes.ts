@@ -1,12 +1,12 @@
 // routes/foreignVehicles.routes.ts
 import { Router } from "express";
-import { requireAuth, AuthRequest } from "../middleware/auth";
-import ForeignVehicle from "../models/ForeignVehicle";
+import { requireAuth } from "../middleware/auth";
+import { ForeignVehicle } from "../models/ForeignVehicle";
 import { resolveCenterScope } from "../utils/tenant";
 
 const r = Router();
 
-r.get("/", requireAuth, async (req: AuthRequest, res) => {
+r.get("/", requireAuth, async (req, res) => {
   const centerScope = resolveCenterScope(req);
 
   const filter: any = {};
@@ -24,7 +24,7 @@ r.get("/", requireAuth, async (req: AuthRequest, res) => {
   res.json({ data: items });
 });
 
-r.post("/", requireAuth, async (req: AuthRequest, res) => {
+r.post("/", requireAuth, async (req, res) => {
   const u = req.user!;
   if (u.role === "admin") {
     // admin لازم يحدد centerId عند إنشاء سجل (أو تختار سياسة معينة)

@@ -32,7 +32,7 @@ const generateToken = (user: any) => {
       permissions: user.permissions || [], // ✅ مهم للـ RBAC
     },
     process.env.JWT_SECRET || "your-secret-jwt-key-change-in-production-2024",
-    { expiresIn: process.env.JWT_EXPIRES_IN || "7d" } as jwt.SignOptions
+    { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
   );
 };
 

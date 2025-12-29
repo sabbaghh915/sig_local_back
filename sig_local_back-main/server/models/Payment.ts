@@ -42,9 +42,6 @@ export interface IPayment extends Document {
   processedBy: mongoose.Types.ObjectId;
   paymentDate: Date;
 
-  center?: mongoose.Types.ObjectId | null;
-  insuranceCompany?: mongoose.Types.ObjectId | null;
-
   // Snapshots
   pricingInput?: any;
   breakdown?: QuoteBreakdown;
@@ -96,11 +93,11 @@ const PaymentSchema: Schema = new Schema(
     breakdown: { type: QuoteSchema, default: undefined },
 
     insuranceCompany: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "InsuranceCompany",
-      default: null,
-      index: true,
-    },
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "InsuranceCompany",
+  default: null,
+  index: true,
+},
 
   },
   { timestamps: true }

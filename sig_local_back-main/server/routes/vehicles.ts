@@ -84,7 +84,7 @@ router.get("/:id", protect, async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ success: false, message: "Invalid vehicle id" });
     }
 
-    let vehicle: any = await SyrianVehicle.findById(id).populate("createdBy", "username fullName");
+    let vehicle = await SyrianVehicle.findById(id).populate("createdBy", "username fullName");
     if (!vehicle) vehicle = await ForeignVehicle.findById(id).populate("createdBy", "username fullName");
 
     if (!vehicle) return res.status(404).json({ success: false, message: "Vehicle not found" });

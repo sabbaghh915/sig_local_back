@@ -89,10 +89,10 @@ router.post("/", protect, async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ success: false, message: "Vehicle not found" });
     }
     console.log("content-type:", req.headers["content-type"]);
-    console.log("body keys:", Object.keys(req.body || {}));
-    console.log("breakdown:", req.body?.breakdown);
-    console.log("quote:", req.body?.quote);
-    console.log("pricingInput.quote:", req.body?.pricingInput?.quote);
+console.log("body keys:", Object.keys(req.body || {}));
+console.log("breakdown:", req.body?.breakdown);
+console.log("quote:", req.body?.quote);
+console.log("pricingInput.quote:", req.body?.pricingInput?.quote);
 
 
     // ✅ 1) اجلب breakdown/quote من أي مكان ممكن
@@ -102,21 +102,21 @@ router.post("/", protect, async (req: AuthRequest, res: Response) => {
       req.body?.pricingInput?.breakdown ??
       req.body?.pricingInput?.quote ??
       vehicle?.pricing?.quote ??           // ✅ fallback
-      vehicle?.pricing?.breakdown ??
+  vehicle?.pricing?.breakdown ??
       null;
 
     // ✅ دعم FormData: إذا جاء كنص JSON
     if (typeof raw === "string") {
-      try { raw = JSON.parse(raw); } catch { }
-    }
+  try { raw = JSON.parse(raw); } catch {}
+}
 
-    if (!raw || typeof raw !== "object") {
-      return res.status(400).json({
-        success: false,
-        message:
-          "breakdown أو quote مطلوب. (لا يوجد breakdown في الطلب ولا في vehicle.pricing.quote)",
-      });
-    }
+if (!raw || typeof raw !== "object") {
+  return res.status(400).json({
+    success: false,
+    message:
+      "breakdown أو quote مطلوب. (لا يوجد breakdown في الطلب ولا في vehicle.pricing.quote)",
+  });
+}
 
     // ✅ 2) ابنِ b (تفصيل الرسوم) قبل أي استخدام
     const b: any = {
@@ -167,15 +167,13 @@ router.post("/", protect, async (req: AuthRequest, res: Response) => {
     const processedBy =
       processedById && mongoose.isValidObjectId(processedById) ? new mongoose.Types.ObjectId(processedById) : null;
 
-    if (!processedBy) {
-      return res.status(401).json({ success: false, message: "User not authenticated correctly" });
-    }
-
+    // ✅ اختر شركة تأمين حسب الحصص
     const companies = await InsuranceCompany.find({ isActive: true }).select("_id sharePercent isActive");
     const picked = pickCompanyWeighted(companies);
+
     const amountNum = n(amount);
 
-    const payment: any = await Payment.create({
+    const payment = await Payment.create({
       vehicleId,
       vehicleModel,
       policyNumber,
@@ -190,11 +188,11 @@ router.post("/", protect, async (req: AuthRequest, res: Response) => {
 
       processedBy,
       center,
-      insuranceCompany: (picked as any)?._id || null,
+      insuranceCompany: picked?._id || null,
 
       pricingInput: pricingInput ?? undefined,
-      breakdown: b,
-    } as any);
+      breakdown: b, // ✅ خزّن نفس التفصيل
+    });
 
     // ✅ تطبيع القيم قبل تخزينها في finance_breakdowns
     const pCenterId = normalizeObjectId(payment.center);
@@ -317,7 +315,7 @@ router.get(
   protect,
   requireRole("admin", "assistant_admin"),
   requirePermission("view_payments"),
-
+  
 );
 
 

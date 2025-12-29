@@ -4,9 +4,6 @@
  * and/or small pure JS functions that can be used on both client and server
  */
 
-import mongoose, { Schema } from "mongoose";
-import { IUser } from "../server/models/User";
-
 /**
  * Example response type for /api/demo
  */
@@ -106,71 +103,3 @@ export interface ApiResponse<T = any> {
   count?: number;
   message?: string;
 }
-export const UserSchema = new Schema<IUser>(
-  {
-    username: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
-      minlength: 3,
-    },
-
-    // ✅ الأفضل أمنياً: لا تُرجع password افتراضياً
-    password: {
-      type: String,
-      required: true,
-      minlength: 6,
-      select: false,
-    },
-
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
-      lowercase: true,
-    },
-
-    fullName: {
-      type: String,
-      required: true,
-    },
-
-    employeeId: {
-      type: String,
-      unique: true,
-      sparse: true,
-    },
-
-    phoneNumber: {
-      type: String,
-    },
-
-    center: { type: mongoose.Schema.Types.ObjectId, ref: "Center", default: null },
-
-    centerId: {
-      type: Schema.Types.ObjectId,
-      ref: "Center", // لازم يطابق اسم الموديل تبع المراكز عندك
-      default: null,
-      index: true,
-    },
-
-    isActive: {
-      type: Boolean,
-      default: true,
-    },
-
-    permissions: { type: [String], default: [] },
-
-    role: {
-      type: String,
-      enum: ["admin", "assistant_admin", "employee"],
-      default: "employee",
-    },
-
-    lastLoginIp: { type: String, default: "" },
-    lastLoginAt: { type: Date, default: null },
-  },
-  { timestamps: true }
-);

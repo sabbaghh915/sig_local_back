@@ -26,7 +26,7 @@ export const getFinanceBreakdownByCenter = async (req: any, res: any) => {
   const match: any = { createdAt: { $gte: fromDate, $lte: toDate } };
   if (centerId) match.centerId = new mongoose.Types.ObjectId(centerId);
 
-  const pipeline: any[] = [
+  const pipeline = [
     { $match: match },
     {
       $addFields: {
@@ -122,7 +122,7 @@ export const getFinanceBreakdownByCenter = async (req: any, res: any) => {
 };
 
 
-export const getFinanceDistributionByCompany = async (req: any, res: any) => {
+ export const getFinanceDistributionByCompany = async (req: any, res: any) => {
   try {
     const { from, to, centerId } = req.query as { from: string; to: string; centerId?: string };
     if (!from || !to) return res.status(400).json({ success: false, message: "from/to مطلوبين" });

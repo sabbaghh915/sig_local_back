@@ -1,7 +1,7 @@
 // routes/centers.routes.ts
 import { Router } from "express";
 import { requireAuth, allowRoles } from "../middleware/auth";
-import Center from "../models/Center";
+import { Center } from "../models/Center";
 
 const r = Router();
 
