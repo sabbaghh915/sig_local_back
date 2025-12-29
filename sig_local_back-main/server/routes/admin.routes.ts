@@ -6,6 +6,7 @@ import User from "../models/User";
 import Center from "../models/Center";
 import bcrypt from "bcryptjs";
 import { getFinanceBreakdownByCenter } from "../controllers/adminFinance.controller";
+import mongoose from "mongoose";
 import { getFinanceDistributionByCompany } from "../controllers/adminFinance.controller";
 import {  rebuildFinanceByCenter } from "../controllers/adminFinance.controller";
 import {  requirePermission } from "../middleware/permissions";
@@ -176,6 +177,11 @@ router.post(
   requireRole("admin"),
   rebuildFinanceByCenter
 );
+
+router.get("/admin/dashboard", protect, requireRole("admin"));
+
+router.get("/assistant/dashboard", protect, requireRole("assistant_admin", "admin"));
+
 
 
 

@@ -18,6 +18,7 @@ import financeRoutes from "./routes/admin.finance";
 import publicCentersRoutes from "./routes//centers.public";
 import statsRoutes from "./routes/stats.routes";
 import insuranceCompaniesRoutes from "./routes/admin.insuranceCompanies";
+import exportRoutes from "./routes/admin.exports.routes";
 
 
 
@@ -58,6 +59,7 @@ export function createServer() {
   app.use("/api", publicCentersRoutes);
   app.use("/api", statsRoutes);
   app.use("/api/admin/insurance-companies", insuranceCompaniesRoutes);
+  app.use("/api", exportRoutes);
 
   
   // ✅ Admin
