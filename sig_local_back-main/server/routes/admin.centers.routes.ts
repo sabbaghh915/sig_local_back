@@ -34,7 +34,7 @@ router.post("/", async (req, res) => {
     const { name, ip, code, address, isActive } = req.body;
     if (!name) return res.status(400).json({ message: "name is required" });
 
-    const created = await Center.create({ name, ip, code, address, isActive });
+    const created = await Center.create({ name, ip: ip || address, code, isActive });
     return res.json(created);
   } catch (e) {
     console.error(e);

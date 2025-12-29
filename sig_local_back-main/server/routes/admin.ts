@@ -67,12 +67,10 @@ router.post("/users", requireAuth, allowRoles("admin"), async (req, res) => {
   const user = await User.create({
     username,
     fullName,
-    password,  
+    password: passwordHash,
     email,
     role,
     employeeId,
-    centerId: role === "admin" ? null : centerId,
-    passwordHash,
     isActive: true,
     center: finalCenter,
   });

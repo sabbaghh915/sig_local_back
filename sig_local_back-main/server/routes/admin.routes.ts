@@ -1,5 +1,5 @@
-import express from "express";
-import { authorize, protect } from "../middleware/auth";
+import express, { Response } from "express";
+import { authorize, protect, AuthRequest } from "../middleware/auth";
 import { requireAuth, allowRoles } from "../middleware/auth";
 import { requireRole } from "../middleware/permissions.ts";
 import User from "../models/User";
@@ -8,12 +8,8 @@ import bcrypt from "bcryptjs";
 import { getFinanceBreakdownByCenter } from "../controllers/adminFinance.controller";
 import mongoose from "mongoose";
 import { getFinanceDistributionByCompany } from "../controllers/adminFinance.controller";
-import {  rebuildFinanceByCenter } from "../controllers/adminFinance.controller";
-import {  requirePermission } from "../middleware/permissions";
-
-
-
-
+import { rebuildFinanceByCenter } from "../controllers/adminFinance.controller";
+import { requirePermission } from "../middleware/permissions";
 
 
 const router = express.Router();
@@ -24,10 +20,6 @@ const requireAdmin = (req: AuthRequest, res: Response, next: any) => {
   }
   next();
 };
-
-router.get("/users", protect, async (req, res) => {
-  res.json([]);
-});
 
 /** مراكز - للـ dropdown */
 router.get("/centers", requireAuth, allowRoles("admin"), async (_req, res) => {
@@ -72,8 +64,8 @@ router.post("/users", requireAuth, allowRoles("admin"), async (req, res) => {
     email,
     role,
     employeeId,
-    centerId: role === "admin" ? null : centerId,
-    passwordHash,
+    center: role === "admin" ? null : centerId,
+    password: passwordHash,
     isActive: true,
   });
 
@@ -113,12 +105,12 @@ router.post("/assistant-admins", protect, requireRole("admin"), async (req, res)
 
   const user = await User.create({
     username,
-  email,
-  fullName,
-  password,          // ✅ plaintext فقط، الموديل سيعمل hash مرة واحدة
-  role: "assistant_admin",
-  permissions: permissions || [],
-  isActive: true,
+    email,
+    fullName,
+    password: hash,
+    role: "assistant_admin",
+    permissions: permissions || [],
+    isActive: true,
   });
 
   return res.json({ success: true, data: { _id: user._id, username, fullName, email, role: user.role, permissions: user.permissions, isActive: user.isActive } });
@@ -181,13 +173,6 @@ router.post(
 router.get("/admin/dashboard", protect, requireRole("admin"));
 
 router.get("/assistant/dashboard", protect, requireRole("assistant_admin", "admin"));
-
-
-
-
-
-
-
 
 
 export default router;

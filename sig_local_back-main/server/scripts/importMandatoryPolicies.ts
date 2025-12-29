@@ -97,6 +97,7 @@ async function main() {
 
   await mongoose.connect(mongoUri);
   const db = mongoose.connection.db;
+  if (!db) throw new Error("Database not connected");
 
   const wb = XLSX.readFile(filePath, { cellDates: true });
   const ws = wb.Sheets[wb.SheetNames[0]];

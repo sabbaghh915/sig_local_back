@@ -1,5 +1,6 @@
-import mongoose, { Schema, Document, Types } from "mongoose";
+import mongoose, { Document, Types } from "mongoose";
 import bcrypt from "bcryptjs";
+import { UserSchema } from "@shared/api";
 
 export interface IUser extends Document {
   username: string;
@@ -22,68 +23,6 @@ export interface IUser extends Document {
 
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
-
-const UserSchema = new Schema<IUser>(
-  {
-    username: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
-      minlength: 3,
-    },
-
-    // ✅ الأفضل أمنياً: لا تُرجع password افتراضياً
-    password: {
-      type: String,
-      required: true,
-      minlength: 6,
-      select: false,
-    },
-
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
-      lowercase: true,
-    },
-
-    fullName: {
-      type: String,
-      required: true,
-    },
-
-    employeeId: {
-      type: String,
-      unique: true,
-      sparse: true,
-    },
-
-    phoneNumber: {
-      type: String,
-    },
-
-    center: { type: mongoose.Schema.Types.ObjectId, ref: "Center", default: null },
-
-    isActive: {
-      type: Boolean,
-      default: true,
-    },
-
-    permissions: { type: [String], default: [] },
-
-    role: {
-      type: String,
-      enum: ["admin", "assistant_admin", "employee"],
-      default: "employee",
-    },
-
-    lastLoginIp: { type: String, default: "" },
-    lastLoginAt: { type: Date, default: null },
-  },
-  { timestamps: true }
-);
 
 // ✅ helper: تحقق إذا كلمة المرور أصلاً bcrypt hash (حتى ما نعمل hash مرتين)
 const looksLikeBcryptHash = (v: any) => {

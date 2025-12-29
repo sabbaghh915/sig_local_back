@@ -12,4 +12,13 @@ const CenterSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export default mongoose.model("Center", CenterSchema);
+export interface ICenter extends mongoose.Document {
+  legacyId?: number;
+  name: string;
+  ip?: string;
+  code?: string;
+  province?: string;
+  isActive: boolean;
+}
+
+export default mongoose.model<ICenter>("Center", CenterSchema);

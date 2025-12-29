@@ -61,17 +61,16 @@ export function createServer() {
   app.use("/api/admin/insurance-companies", insuranceCompaniesRoutes);
   app.use("/api", exportRoutes);
 
-  
+
   // ✅ Admin
-app.use("/api/admin", asRouter(adminCentersRoutes));
-app.use("/api/admin/centers", adminCentersRoutes);
-app.use("/api/admin", asRouter(adminRoutes));
-app.use("/api/admin", asRouter(adminRoutes1));
-  
+  app.use("/api/admin/centers", adminCentersRoutes);
+  app.use("/api/admin", asRouter(adminRoutes1)); // This handles /users, /finance, etc.
+  app.use("/api/admin", asRouter(adminRoutes));  // Fallback or old routes
+
 
   // Health check for MongoDB
   app.get("/api/health", (_req, res) => {
-    res.json({ 
+    res.json({
       status: "ok",
       timestamp: new Date().toISOString(),
       database: "connected"

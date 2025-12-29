@@ -32,7 +32,7 @@ const pick = (row: any, keys: string[]) => {
 async function main() {
   await connectDB();
 
-  const filePath = path.resolve(argFile);
+  const filePath = path.resolve(argFile!);
   console.log("📄 Reading:", filePath);
 
   const wb = xlsx.readFile(filePath);
