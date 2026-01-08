@@ -1,4 +1,4 @@
-export const baseNetPremiumsRaw = {
+export const defaultBaseNetPremiums = {
   internal: {
     '01a-01': 80800, '01a-02': 138800, '01a-03': 80800, '01a-04': 138800,
     '01b-01': 80800, '01b-02': 138800, '01b-03': 80800, '01b-04': 138800,
@@ -49,6 +49,7 @@ export const baseNetPremiumsRaw = {
 
     'elec-car-01': 80800, 'elec-car-02': 138800, 'elec-car-03': 80800, 'elec-car-04': 138800,
     'elec-bike-01': 57500, 'elec-bike-02': 57500, 'elec-bike-03': 57500, 'elec-bike-04': 57500
+
   },
   border: {
     'tourist-3': 612500, 'tourist-6': 863700, 'tourist-12': 1250400,
@@ -56,16 +57,4 @@ export const baseNetPremiumsRaw = {
     'bus-3': 873400, 'bus-6': 1250400, 'bus-12': 1656500,
     'other-3': 738100, 'other-6': 989500, 'other-12': 1414800
   },
-} as const;
-
-// ✅ يحذف صفرين (÷100) ويعطيك نفس البنية
-function divideValues<T extends Record<string, number>>(obj: T, by = 100) {
-  return Object.fromEntries(
-    Object.entries(obj).map(([k, v]) => [k, Math.round(v / by)])
-  ) as Record<keyof T, number>;
-}
-
-export const baseNetPremiums = {
-  internal: divideValues(baseNetPremiumsRaw.internal, 100),
-  border: divideValues(baseNetPremiumsRaw.border, 100),
 } as const;

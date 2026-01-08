@@ -61,7 +61,28 @@ export const authorize = (...roles: string[]) => {
 };
 
 // ✅ Aliases حتى كودك القديم/الجديد يشتغل
-export const requireAuth = protect;
+//export const requireAuth = protect;
 export const allowRoles = (...roles: string[]) => authorize(...roles);
 
+export function requireAuth(req: any, res: any, next: any) {
+  try {
+    const auth = req.headers.authorization || "";
+    const bearer = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+
+    const token =
+      bearer ||
+      req.headers["x-auth-token"] ||
+      req.headers["x-access-token"] ||
+      req.cookies?.token ||
+      req.cookies?.accessToken;
+
+    if (!token) return res.status(401).json({ message: "Unauthorized: missing token" });
+
+    const decoded = jwt.verify(String(token), process.env.JWT_SECRET!);
+    req.user = decoded; // لازم يكون فيه id, role, centerId
+    return next();
+  } catch (e) {
+    return res.status(401).json({ message: "Unauthorized: invalid token" });
+  }
+}
 

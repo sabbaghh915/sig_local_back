@@ -20,6 +20,9 @@ export interface IUser extends Document {
   lastLoginIp?: string;
   lastLoginAt?: Date | null;
 
+  lastSeenAt?: Date | null;
+  lastSeenIp?: string | null;
+
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -81,6 +84,10 @@ const UserSchema = new Schema<IUser>(
 
     lastLoginIp: { type: String, default: "" },
     lastLoginAt: { type: Date, default: null },
+
+     lastSeenAt: { type: Date, default: null },
+    lastSeenIp: { type: String, default: null },
+    
   },
   { timestamps: true }
 );

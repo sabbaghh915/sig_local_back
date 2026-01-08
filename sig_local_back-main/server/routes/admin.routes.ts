@@ -18,6 +18,8 @@ import {  requirePermission } from "../middleware/permissions";
 
 const router = express.Router();
 
+const ONLINE_WINDOW_MIN = 5;
+
 const requireAdmin = (req: AuthRequest, res: Response, next: any) => {
   if (req.user?.role !== "admin") {
     return res.status(403).json({ success: false, message: "Forbidden" });
@@ -44,6 +46,19 @@ router.get("/users", requireAuth, allowRoles("admin"), async (req, res) => {
     .select("username fullName email role employeeId centerId isActive lastLoginIp lastLoginAt createdAt")
     .sort({ createdAt: -1 })
     .populate("centerId", "name code");
+
+    const now = Date.now();
+  const onlineMs = ONLINE_WINDOW_MIN * 60 * 1000;
+
+  const mapped = users.map((u: any) => {
+    const lastSeen = u.lastSeenAt ? new Date(u.lastSeenAt).getTime() : 0;
+    const isOnline = lastSeen && now - lastSeen <= onlineMs;
+
+    return {
+      ...u,
+      isOnline, // ✅ هذا اللي استخدمه بالفرونت
+    };
+  });
 
   res.json({ data: users });
 });

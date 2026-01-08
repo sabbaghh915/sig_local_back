@@ -19,6 +19,9 @@ import publicCentersRoutes from "./routes//centers.public";
 import statsRoutes from "./routes/stats.routes";
 import insuranceCompaniesRoutes from "./routes/admin.insuranceCompanies";
 import exportRoutes from "./routes/admin.exports.routes";
+import recordsRoutes from "./routes/records.routes";
+import presenceRoutes from "./routes/presence";
+import adminPricingRoutes from "./routes/pricing.routes";
 
 
 
@@ -60,6 +63,9 @@ export function createServer() {
   app.use("/api", statsRoutes);
   app.use("/api/admin/insurance-companies", insuranceCompaniesRoutes);
   app.use("/api", exportRoutes);
+  app.use("/api/records", recordsRoutes);
+  app.use("/api/presence", presenceRoutes);
+  app.use("/api/admin/pricing", adminPricingRoutes);
 
   
   // ✅ Admin

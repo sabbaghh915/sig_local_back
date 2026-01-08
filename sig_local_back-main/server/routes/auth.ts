@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import User from "../models/User";
 import { protect } from "../middleware/auth";
+import { getClientIp } from "../utils/getClientIp";
 
 const router = Router();
 
@@ -103,6 +104,8 @@ router.post("/login", async (req: Request, res: Response) => {
   try {
     const { username, email, password, centerId } = req.body as any;
 
+    
+
     // identifier ممكن يجي username أو email أو حتى حقل username يحمل ايميل
     const identifier = String(username || email || "").trim();
 
@@ -162,10 +165,18 @@ router.post("/login", async (req: Request, res: Response) => {
 
     // سجل IP بعد نجاح الدخول
     const ip = getClientIp(req);
+    const now = new Date();
     await User.updateOne(
-      { _id: user._id },
-      { $set: { lastLoginIp: ip, lastLoginAt: new Date() } }
-    );
+  { _id: user._id },
+  {
+    $set: {
+      lastLoginAt: now,
+      lastLoginIp: ip,
+      lastSeenAt: now,
+      lastSeenIp: ip,
+    },
+  }
+).exec();
 
     // رجّع بيانات المركز للفرونت (إذا موجود)
     await user.populate("center", "name code ip province");

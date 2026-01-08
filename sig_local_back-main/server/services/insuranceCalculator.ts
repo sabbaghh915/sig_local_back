@@ -1,124 +1,119 @@
-// server/services/insuranceCalculator.ts
-import { baseNetPremiums } from "../config/baseNetPremiums";
+import { getActivePricingConfig, getPriceFromCfg } from "./pricingStore";
 
-type InsuranceType = "internal" | "border";
+type CalcInput =
+  | {
+      insuranceType: "internal";
+      vehicleCode: string;      // لازم تكون مثل: 01a, 02b, 08, elec-car ...
+      category: string;         // لازم تكون مثل: 01/02/03/04 أو private/public...
+      classification?: string;  // موجود بالفرونت لكن غير مستخدم بالتسعير الحالي
+      months: number;
+      electronicCard?: boolean;
+      premiumService?: boolean;
+      rescueService?: boolean;
+    }
+  | {
+      insuranceType: "border";
+      borderVehicleType: string; // tourist | motorcycle | bus | other
+      months: number;            // 3/6/12
+    };
 
-type Classification = 0 | 1 | 2 | 3; // نفس الحاسبة: 0 عادي، 1 حكومي، 2 طابع مخفض، 3 معفى الطابع
-type Period = 12 | 6 | 3;            // أشهر
+const n = (v: any) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+const s = (v: any) => String(v ?? "").trim();
 
-const classificationModifiers: Record<Classification, { netMultiplier: number; stampMultiplier: number }> = {
-  0: { netMultiplier: 1.0, stampMultiplier: 1.0 },
-  1: { netMultiplier: 0.8, stampMultiplier: 0.8 },
-  2: { netMultiplier: 1.0, stampMultiplier: 0.5 },
-  3: { netMultiplier: 1.0, stampMultiplier: 0.0 },
+const CATEGORY_MAP: Record<string, string> = {
+  // EN
+  private: "01",
+  public: "02",
+  government: "03",
+  rental: "04",
+
+  // AR
+  "خاصة": "01",
+  "عامة": "02",
+  "حكومي": "03",
+  "تاجير": "04",
+  "تأجير": "04",
+
+  // already codes
+  "1": "01",
+  "2": "02",
+  "3": "03",
+  "4": "04",
+  "01": "01",
+  "02": "02",
+  "03": "03",
+  "04": "04",
 };
 
-const periodMultipliers: Record<Period, number> = {
-  12: 1.0,
-  6: 0.6,
-  3: 0.3,
-};
+export async function calculateInsurancePremium(input: CalcInput) {
+  const cfg = await getActivePricingConfig();
+  if (!cfg) throw new Error("لا يوجد تسعير فعّال حالياً");
 
-function ceilingTo(value: number, step = 100) {
-  return Math.ceil(value / step) * step;
-}
+  // DB عندك داخلي مثل 808 و 1388 => غالباً لازم * 100 لتصير بالليرة
+  const INTERNAL_SCALE = Number(process.env.INTERNAL_SCALE || 1);
+  const BORDER_SCALE = Number(process.env.BORDER_SCALE || 1);
 
-function round0(value: number) {
-  return Math.round(value);
-}
-
-export function calculateInsurancePremium(input: {
-  insuranceType: InsuranceType;
-
-  // ✅ internal
-  vehicleType?: string;   // مثل 01a / 01b ... (حسب الحاسبة)
-  category?: "01" | "02" | "03" | "04"; // خاص بـ internal
-  classification?: Classification;
-  period?: Period;
-
-  // ✅ border
-  borderType?: string; // tourist / motorcycle / bus / other
-  borderPeriod?: Period;
-}) {
-  const warFee = 300;
-  const martyrFee = 200;
+  let netPremium = 0;
 
   if (input.insuranceType === "internal") {
-    const vehicleType = input.vehicleType;
-    const category = input.category;
-    const classification = (input.classification ?? 0) as Classification;
-    const period = (input.period ?? 12) as Period;
+    const vehicleCode = s(input.vehicleCode); // مثال صحيح: 01a
+    const catRaw = s(input.category).toLowerCase();
+    const catCode = CATEGORY_MAP[catRaw] ?? s(input.category); // يطلع 01..04
 
-    if (!vehicleType || !category) {
-      throw new Error("Missing vehicleType/category for internal insurance");
+    // ✅ هذا هو المفتاح الحقيقي بقاعدتك
+    const key = `${vehicleCode}-${catCode}`; // مثال: 01a-01
+
+    const baseRaw = n(getPriceFromCfg(cfg, "internal", key)); // مثال: 808
+    if (!baseRaw) {
+      throw new Error(`لم يتم العثور على سعر (internal) للمفتاح: ${key}`);
     }
 
-    const key = `${vehicleType}-${category}` as keyof typeof baseNetPremiums.internal;
-    const annualNet = baseNetPremiums.internal[key];
+    const annualSyp = Math.round(baseRaw * INTERNAL_SCALE); // 808 * 100 = 80800
+    const months = Math.max(1, n(input.months || 12));
+    netPremium = Math.round((annualSyp * months) / 12);
+  } else {
+    const borderType = s(input.borderVehicleType);
+    const months = Math.max(1, n(input.months));
+    const key = `${borderType}-${months}`; // tourist-12
 
-    if (annualNet == null) {
-      throw new Error(`No base net premium found for key: ${String(key)}`);
+    const baseRaw = n(getPriceFromCfg(cfg, "border", key));
+    if (!baseRaw) {
+      throw new Error(`لم يتم العثور على سعر (border) للمفتاح: ${key}`);
     }
 
-    const mod = classificationModifiers[classification];
-    const netPremium = round0(annualNet * mod.netMultiplier * periodMultipliers[period]);
-
-    // ✅ نفس حاسبتك: stampBase = CEILING(net*0.03 + 5000, 100)
-    const stampBase = ceilingTo(netPremium * 0.03 + 5000, 100);
-
-    // مهم: في ملف الـ HTML عندك stampMultiplier موجود لكنه غير مستخدم
-    // هنا طبقناه ليصبح "طابع مخفض/معفى" فعّال:
-    const stampFee = ceilingTo(stampBase * mod.stampMultiplier, 100);
-
-    const localFee = ceilingTo((stampFee + warFee) * 0.05, 100);
-    const reconFee = ceilingTo(stampFee * 0.10, 100);
-
-    // ✅ نفس الحاسبة: local & recon على netPremium
-    //const localFee = ceilingTo(netPremium * 0.05, 100);
-    //const reconFee = ceilingTo(netPremium * 0.10, 100);
-
-    const total = netPremium + stampFee + warFee + martyrFee + localFee + reconFee;
-
-    return {
-      insuranceType: "internal" as const,
-      inputs: { vehicleType, category, classification, period },
-      breakdown: { netPremium, stampFee, warFee, martyrFee, localFee, reconFee },
-      total,
-    };
+    netPremium = Math.round(baseRaw * BORDER_SCALE);
   }
 
-  // border
-  const borderType = input.borderType;
-  const borderPeriod = (input.borderPeriod ?? 12) as Period;
+  // الرسوم
+  const stampFee = Math.round(netPremium * 0.01);
+  const warEffort = Math.round(netPremium * 0.05);
+  const localAdmin = Math.round(netPremium * 0.02);
+  const martyrStamp = Math.round(netPremium * 0.01);
+  const reconstruction = Math.round(netPremium * 0);
 
-  if (!borderType) {
-    throw new Error("Missing borderType for border insurance");
-  }
+  const electronicCardFee = input.insuranceType === "internal" && input.electronicCard ? 150 : 0;
+  const premiumServiceFee = input.insuranceType === "internal" && input.premiumService ? 50 : 0;
+  const rescueServiceFee = input.insuranceType === "internal" && input.rescueService ? 30 : 0;
 
-  const key = `${borderType}-${borderPeriod}` as keyof typeof baseNetPremiums.border;
-  const netPremium = baseNetPremiums.border[key];
-
-  if (netPremium == null) {
-    throw new Error(`No border net premium found for key: ${String(key)}`);
-  }
-
-  // ✅ نفس حاسبتك: stamp = CEILING(net*0.03 + 1000, 100)
-  const stampBase = ceilingTo(netPremium * 0.03 + 5000, 100);
-
-    // مهم: في ملف الـ HTML عندك stampMultiplier موجود لكنه غير مستخدم
-    // هنا طبقناه ليصبح "طابع مخفض/معفى" فعّال:
-  const stampFee = ceilingTo(stampBase, 100);
-
-  // حسب الحاسبة: local & recon = 0 للحدودي
-  const localFee = ceilingTo((stampFee + warFee) * 0.05, 100);;
-  const reconFee = ceilingTo(stampFee * 0.10, 100);
-
-  const total = netPremium + stampFee + warFee + martyrFee + localFee + reconFee;
+  const subtotal = netPremium + stampFee + warEffort + localAdmin + martyrStamp + reconstruction;
+  const total = subtotal + electronicCardFee + premiumServiceFee + rescueServiceFee;
 
   return {
-    insuranceType: "border" as const,
-    inputs: { borderType, borderPeriod },
-    breakdown: { netPremium, stampFee, warFee, martyrFee, localFee, reconFee },
     total,
+    breakdown: {
+      netPremium,
+      stampFee,
+      warEffort,
+      localAdmin,
+      martyrStamp,
+      reconstruction,
+      electronicCardFee,
+      premiumServiceFee,
+      rescueServiceFee,
+      subtotal,
+      total,
+    },
+    pricingVersion: cfg.version,
+    pricingUpdatedAt: cfg.updatedAt,
   };
 }

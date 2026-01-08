@@ -1,34 +1,43 @@
 import { Router } from "express";
 import { calculateInsurancePremium } from "../services/insuranceCalculator";
+import { protect } from "../middleware/auth";
 
 const router = Router();
 
-router.post("/calculate", (req, res) => {
+router.post("/calculate", protect, async (req, res) => {
   try {
     const body: any = { ...(req.body || {}) };
 
-    // Normalize INTERNAL
+    // ✅ Normalize INTERNAL
     if (body.insuranceType === "internal") {
-      body.vehicleType = body.vehicleType ?? body.vehicleCode;
-      body.period = body.period ?? body.months;
+      body.vehicleCode = body.vehicleCode ?? body.vehicleType ?? "";
+      body.months = body.months ?? body.period ?? body.insuranceMonths ?? 12;
+
       body.classification =
         typeof body.classification === "string"
-          ? Number(body.classification)
-          : body.classification;
+          ? String(body.classification) // خليها string مثل فرونتك
+          : String(body.classification ?? "");
+
+      // optional services (internal only)
+      body.electronicCard = body.electronicCard ?? body.services?.electronicCard ?? false;
+      body.premiumService = body.premiumService ?? body.services?.premiumService ?? false;
+      body.rescueService = body.rescueService ?? body.services?.rescueService ?? false;
     }
 
-    // Normalize BORDER
+    // ✅ Normalize BORDER
     if (body.insuranceType === "border") {
-      body.borderType = body.borderType ?? body.borderVehicleType;
-      body.borderPeriod = body.borderPeriod ?? body.months ?? body.insuranceMonths;
+      body.borderVehicleType = body.borderVehicleType ?? body.borderType ?? "";
+      body.months = body.months ?? body.borderPeriod ?? body.insuranceMonths ?? 12;
     }
 
-    const result = calculateInsurancePremium(body);
+    // ✅ احسب (لازم تكون async إذا تقرأ من DB)
+    const result = await calculateInsurancePremium(body);
+
     return res.json({ success: true, data: result });
-  } catch (err: any) {
+  } catch (e: any) {
     return res.status(400).json({
       success: false,
-      message: err?.message || "Bad Request",
+      message: e?.message || "فشل الحساب",
     });
   }
 });

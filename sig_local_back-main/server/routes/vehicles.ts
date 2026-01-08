@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import SyrianVehicle from "../models/SyrianVehicle";
 import ForeignVehicle from "../models/ForeignVehicle";
 import { protect, AuthRequest } from "../middleware/auth";
+import { upsertRecordFromVehicle } from "../utils/recordsSync";
 
 const router = Router();
 
@@ -10,23 +11,72 @@ const pickModel = (vehicleType?: string) => {
   return vehicleType === "foreign" ? ForeignVehicle : SyrianVehicle;
 };
 
-// CREATE
+// CREATE (or UPSERT)
 router.post("/", protect, async (req: AuthRequest, res: Response) => {
   try {
     const Model = pickModel(req.body.vehicleType);
 
-    const vehicle = await Model.create({
-      ...req.body,
-      createdBy: req.user.id,
-      pricing: req.body.pricing ?? { months: 12, quote: {} }, // تأمين required
-    });
+    // ✅ تجهيز pricing إذا غير موجود (حتى لا يفشل validation)
+    if (!req.body.pricing) {
+      const pIn = req.body.pricingInput || req.body.pricing || {};
+      req.body.pricing = {
+        insuranceType: pIn.insuranceType || "internal",
+        vehicleCode: pIn.vehicleCode || req.body.vehicleType || "04",
+        category: pIn.category || "01",
+        classification: String(pIn.classification ?? "0"),
+        months: Number(pIn.months ?? 12),
+        borderVehicleType: pIn.borderVehicleType || "",
+        quote: pIn.quote || req.body.quote || req.body.breakdown || { total: req.body.amount || 0 },
+      };
+    }
 
-    res.status(201).json({ success: true, data: vehicle });
+    // ✅ لو الموظف: لا تسمح له يغيّر centerId (مثل foreignVehicles.routes)
+    if (req.user.role !== "admin") {
+      req.body.centerId = req.user.centerId;
+    } else {
+      // admin: إذا سياستك تتطلب centerId
+      // if (!req.body.centerId) return res.status(400).json({ success:false, message:"centerId is required" });
+    }
+
+    // ✅ فلتر uniqueness (نفس الفهرس الموجود عندك: plateNumber + plateCountry)
+    // إذا في foreign عندك نفس الفهرس، سيشتغل أيضاً
+    const plateNumber = String(req.body.plateNumber || "").trim();
+    const plateCountry = String(req.body.plateCountry || "SY").trim();
+
+    if (!plateNumber || !plateCountry) {
+      return res.status(400).json({ success: false, message: "plateNumber و plateCountry مطلوبة" });
+    }
+
+    const filter = { plateNumber, plateCountry };
+
+    // ✅ Upsert: إذا موجود → تحديث، إذا غير موجود → إنشاء
+    const vehicle = await Model.findOneAndUpdate(
+      filter,
+      {
+        $set: {
+          ...req.body,
+          pricing: req.body.pricing ?? { months: 12, quote: {} },
+        },
+        $setOnInsert: {
+          createdBy: req.user.id,
+        },
+      },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+
+    // ✅ تحديد اسم الموديل للسجلات بشكل صحيح
+    const recordModel: "SyrianVehicle" | "ForeignVehicle" =
+      String(Model.modelName).toLowerCase().includes("foreign") ? "ForeignVehicle" : "SyrianVehicle";
+
+    await upsertRecordFromVehicle(recordModel, vehicle);
+
+    return res.status(200).json({ success: true, data: vehicle, upserted: true });
   } catch (e: any) {
     console.error("Create vehicle error:", e);
-    res.status(500).json({ success: false, message: e.message || "Server error" });
+    return res.status(500).json({ success: false, message: e.message || "Server error" });
   }
 });
+
 
 // LIST
 router.get("/", protect, async (req: AuthRequest, res: Response) => {
